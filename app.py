@@ -20,12 +20,31 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+#app = Flask(__name__, static_folder=os.path.abspath("../frontend/build"), static_url_path="")
+CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+
+
+#Serve static files (CSS, JS, images) - Important for React frontend
+# @app.route("/static/<path:path>")
+# def serve_static(path):
+#     return send_from_directory(os.path.join(app.static_folder, "static"), path)
+
+# # Serve React index.html for all other routes
+# @app.route("/", defaults={"path": ""})
+# @app.route("/<path:path>")
+# def serve(path):
+#     # If the path exists as a file in build folder, serve it (JS, CSS, assets)
+#     if path and os.path.exists(os.path.join(app.static_folder, path)):
+#         return send_from_directory(app.static_folder, path)
+#     # Otherwise, serve index.html for React Router
+#     return send_from_directory(app.static_folder, "index.html")
 #CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes
 #socketio = SocketIO(app, cors_allowed_origins="*")  # Enable CORS for frontend
 # socketio = SocketIO(app, cors_allowed_origins=["http://192.168.0.113:3000"])
 
-CORS(app, resources={r"/*": {"origins": ["http://192.168.0.113:3000", "http://localhost:3000"]}})
-socketio = SocketIO(app, cors_allowed_origins=["http://192.168.0.113:3000", "http://localhost:3000"])
+
 
 
 
@@ -129,7 +148,15 @@ def upload_frame():
 def wheel_in_out():
     try:
         print('inside wheelin method')
-        socketio.emit('wheelinoutdata', 'Received from server', room=request.sid)
+        data = request.json
+        print("Received Camera Status:", data)
+        # Check if the status is 'Wheel In'
+        if data.get("status") == "Wheel In":
+            print("Emitting event: 'wheel_in_detected' to all clients")
+            socketio.emit("wheel_in_detected", data)
+        if data.get("status") == "Wheel Out":
+            print("Emitting event: 'wheel_out_detected' to all clients")
+            socketio.emit("wheel_out_detected", data) 
         return jsonify({"message": "Wheel in  received"}), 200
     except Exception as e:
         return jsonify({"error": "Wheel in check", "details": str(e)}), 500
